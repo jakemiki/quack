@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>quack.js</title>
+
+        <style>
+            html {
+                background-color: #0f0f0f;
+                color: #f0f0f0;
+                font-family: system-ui, -apple-system, sans-serif;
+                overflow-x: hidden;
+            }
+
+            main {
+                margin: 0 auto;
+                max-width: 80ch;
+                min-width: 80ch;
+            }
+        </style>
+    </head>
+    <body>
+        <main></main>
+        <script src="https://unpkg.com/showdown/dist/showdown.min.js"></script>
+        <script>
+            fetch('README.md').then(async (r) => {
+                var converter = new showdown.Converter(),
+                    md = await r.text();
+                converter.setFlavor('github');
+                document.body.querySelector('main').innerHTML += converter.makeHtml(md);
+            });
+        </script>
+        <script src="quack.js" data-debug data-click="0"></script>
+    </body>
+</html>
