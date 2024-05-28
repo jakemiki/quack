@@ -40,6 +40,7 @@ const defaultOptions = {
     speed: 250,
     mouseProximity: 40,
     fps: 60,
+    sprite: 'duck.png',
 
     /**
      * @type {HTMLElement}
@@ -177,14 +178,14 @@ class Duck {
     constructor(options = defaultOptions) {
         this.options = { ...defaultOptions, ...options };
 
-        const { width, height, container } = this.options;
+        const { width, height, container, sprite } = this.options;
 
         this.#style.dataset.duckId = this.id;
         this.#style.textContent = `div[data-duck-id="${this.id}"] {
             position: absolute;
             width: ${px(width)};
             height: ${px(height)};
-            background-image: url('duck.png');
+            background-image: url('${sprite}');
             pointer-events: none;
             z-index: ${Number.MAX_SAFE_INTEGER};
             image-rendering: pixelated;
