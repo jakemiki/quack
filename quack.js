@@ -50,16 +50,25 @@ const defaultOptions = {
 class Duck {
     options = defaultOptions;
     id = crypto.randomUUID();
+
     #style = document.createElement('style');
     #duck = document.createElement('div');
     #timer = 0;
     #handle = 0;
-    jitter = { x: 0, y: 0 };
-    currentState = 'idle';
-    lastTimestamp = document.timeline.currentTime;
-    states = {
+    #jitter = { x: 0, y: 0 };
+    #currentState = 'idle';
+    #lastTimestamp = document.timeline.currentTime;
+    #frames = [];
+    #frameTimes = [];
+    #currentFrameIndex = 0;
+    #currentFrameTime = 0;
+    #states = {
         idle: {
             enter: () => {
+                this.#frames = [0, 1];
+                this.#frameTimes = [2, 0.1];
+                this.#currentFrameIndex = 0;
+                this.#currentFrameTime = Number.MAX_VALUE;
                 this.#timer = 0;
             },
             update: () => {
@@ -79,6 +88,12 @@ class Duck {
             },
         },
         alert: {
+            enter: () => {
+                this.#frames = [1];
+                this.#frameTimes = [1];
+                this.#currentFrameIndex = 0;
+                this.#currentFrameTime = Number.MAX_VALUE;
+            },
             update: () => {
                 if (this.#isCloseToMouse()) {
                     this.#changeState('idle');
@@ -98,6 +113,10 @@ class Duck {
         sleeping: {
             enter: () => {
                 this.#timer = 0;
+                this.#frames = [8, 9, 10, 11];
+                this.#frameTimes = [0.5, 0.5, 0.5, 0.5];
+                this.#currentFrameIndex = 0;
+                this.#currentFrameTime = Number.MAX_VALUE;
             },
             update: () => {
                 if (this.#isCloseToMouse()) {
@@ -114,6 +133,12 @@ class Duck {
             },
         },
         quack: {
+            enter: () => {
+                this.#frames = [12, 13, 14];
+                this.#frameTimes = [0.1, 0.2, 0.2];
+                this.#currentFrameIndex = 0;
+                this.#currentFrameTime = Number.MAX_VALUE;
+            },
             update: () => {
                 if (!this.#handle) {
                     this.#handle = setTimeout(() => this.#changeState('idle'), 500);
@@ -129,17 +154,21 @@ class Duck {
         walking: {
             enter: () => {
                 const { jitter } = this.options;
-                this.jitter = {
+                this.#jitter = {
                     x: randomInt(-jitter, jitter),
                     y: randomInt(-jitter, jitter),
                 };
+                this.#frames = [4, 5, 6, 7];
+                this.#frameTimes = [0.05, 0.05, 0.05, 0.05];
+                this.#currentFrameIndex = 0;
+                this.#currentFrameTime = Number.MAX_VALUE;
             },
             update: (dt) => {
                 if (this.#isCloseToMouse()) {
                     this.#changeState('idle');
                 } else {
                     const { speed } = this.options;
-                    this.#moveTowards(add(this.mouse, this.jitter), speed * dt);
+                    this.#moveTowards(add(this.mouse, this.#jitter), speed * dt);
                 }
             },
         },
@@ -155,22 +184,23 @@ class Duck {
             position: absolute;
             width: ${px(width)};
             height: ${px(height)};
-            background-color: rgb(128, 0, 128);
+            background-image: url('duck.png');
             pointer-events: none;
-            z-index: ${Number.MAX_VALUE};
+            z-index: ${Number.MAX_SAFE_INTEGER};
             image-rendering: pixelated;
         }`;
 
         this.#duck.ariaHidden = true;
         this.#duck.dataset.duckId = this.id;
         this.#move(randomInt(container.clientWidth), randomInt(container.clientHeight));
+        this.#changeState('idle');
     }
 
     quack() {
         document.head.appendChild(this.#style);
         document.body.appendChild(this.#duck);
         this.mouse = MouseListener.listen();
-        this.lastTimestamp = document.timeline.currentTime;
+        this.#lastTimestamp = document.timeline.currentTime;
         window.requestAnimationFrame((t) => this.#update(t));
 
         return this;
@@ -183,18 +213,15 @@ class Duck {
     }
 
     #update(timestamp) {
-        if ('debug' in this.options) {
-            this.#duck.textContent = this.currentState;
-        }
-
         const { fps } = this.options;
 
-        const elapsed = timestamp - this.lastTimestamp;
+        const elapsed = timestamp - this.#lastTimestamp;
         if (elapsed >= 1000 / fps) {
-            this.lastTimestamp = timestamp;
+            this.#lastTimestamp = timestamp;
             const dt = elapsed / 1000;
             this.#timer += dt;
-            this.states[this.currentState].update?.(dt);
+            this.#states[this.#currentState].update?.(dt);
+            this.#animate(dt);
         }
 
         if (!this.lastQuack) {
@@ -202,14 +229,31 @@ class Duck {
         }
     }
 
+    #animate(dt) {
+        if (this.#currentFrameTime > this.#frameTimes[this.#currentFrameIndex]) {
+            this.#currentFrameIndex = (this.#currentFrameIndex + 1) % this.#frames.length;
+            this.#currentFrameTime = 0;
+
+            const frame = this.#frames[this.#currentFrameIndex];
+            const col = frame % 4;
+            const row = Math.floor(frame / 4);
+
+            const { width, height } = this.options;
+            this.#duck.style.backgroundPositionX = px(-col * width);
+            this.#duck.style.backgroundPositionY = px(-row * height);
+        } else {
+            this.#currentFrameTime += dt;
+        }
+    }
+
     /**
-     * @param {keyof(Duck['states'])} stateName
+     * @param {keyof(Duck['#states'])} stateName
      */
     #changeState(stateName) {
-        this.states[this.currentState].exit?.();
-        this.states[stateName].enter?.();
-        'debug' in this.options && console.log(`${this.currentState}\t->\t${stateName}`);
-        this.currentState = stateName;
+        this.#states[this.#currentState].exit?.();
+        this.#states[stateName].enter?.();
+        'debug' in this.options && console.log(`${this.#currentState}\t->\t${stateName}`);
+        this.#currentState = stateName;
     }
 
     #moveTowards(dest, max) {
@@ -235,7 +279,7 @@ class Duck {
 
     #isCloseToMouse() {
         const { mouseProximity } = this.options;
-        return distSquared(this, add(this.mouse, this.jitter)) <= mouseProximity * mouseProximity;
+        return distSquared(this, add(this.mouse, this.#jitter)) <= mouseProximity * mouseProximity;
     }
 }
 
