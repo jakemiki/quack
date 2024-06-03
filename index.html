@@ -3,6 +3,8 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="icon" href="icon.png">
+        <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/styles/github-dark.min.css">
         <title>quack.js</title>
 
         <style>
@@ -11,6 +13,14 @@
                 color: #f0f0f0;
                 font-family: system-ui, -apple-system, sans-serif;
                 overflow-x: hidden;
+            }
+
+            a {
+                color: #ff006e;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
             }
 
             main {
@@ -23,14 +33,17 @@
     <body>
         <main></main>
         <script src="https://unpkg.com/showdown/dist/showdown.min.js"></script>
+        <script src="https://unpkg.com/@highlightjs/cdn-assets@11.9.0/highlight.min.js"></script>
         <script>
             fetch('README.md').then(async (r) => {
                 var converter = new showdown.Converter(),
                     md = await r.text();
                 converter.setFlavor('github');
-                document.body.querySelector('main').innerHTML += converter.makeHtml(md);
+                document.body.querySelector('main').innerHTML = converter.makeHtml(md);
+                hljs.highlightAll();
             });
         </script>
-        <script src="quack.js" data-click="0" data-sprite="duck.png"></script>
+        
+        <script src="quack.js" data-click="0" data-sprite="duck.png" data-sprite-scale="2"></script>
     </body>
 </html>
