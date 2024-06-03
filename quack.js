@@ -143,7 +143,7 @@ const defaultOptions = {
     /**
      * @type {HTMLElement}
      */
-    container: document.querySelector('html'),
+    container: document.querySelector('body'),
 };
 class Duck {
     options = defaultOptions;
