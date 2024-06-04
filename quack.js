@@ -273,9 +273,10 @@ class Duck {
     }
 
     quack() {
+        const { container } = this.options;
         this.lastQuack = false;
         document.head.appendChild(this.#style);
-        document.body.appendChild(this.#duck);
+        container.appendChild(this.#duck);
         this.mouse = MouseListener.listen();
         this.#lastTimestamp = document.timeline.currentTime;
         this.#changeState('idle');
