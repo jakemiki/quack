@@ -9,6 +9,19 @@ const distSquared = (a, b) => {
     return dx * dx + dy * dy;
 };
 
+const offset = (elem) => {
+    const offset = { x: 0, y: 0 };
+    do {
+        if (!isNaN(elem.offsetLeft)) {
+            offset.x += elem.offsetLeft;
+        }
+        if (!isNaN(elem.offsetTop)) {
+            offset.y += elem.offsetTop;
+        }
+    } while ((elem = elem.offsetParent));
+    return offset;
+};
+
 class MouseListener {
     /**
      * @type {MouseListener | undefined}
@@ -146,6 +159,10 @@ const defaultOptions = {
     container: document.querySelector('body'),
 };
 class Duck {
+    /**
+     * @type {typeof defaultOptions}
+     */
+    static scriptOptions;
     options = defaultOptions;
     id = crypto.randomUUID();
 
@@ -159,6 +176,8 @@ class Duck {
     #frameTimes = [];
     #currentFrameIndex = 0;
     #currentFrameTime = 0;
+
+    #offset = { x: 0, y: 0 };
 
     #states = {
         idle: new State({
@@ -241,11 +260,14 @@ class Duck {
                 this.#frameTimes = [0.05, 0.05, 0.05, 0.05];
             },
             update: (state, dt) => {
+                const { container } = this.options;
                 if (this.#isCloseToMouse()) {
                     this.#changeState('idle');
                 } else {
                     const { speed } = this.options;
-                    this.#moveTowards(add(this.mouse, state.jitter), speed * dt);
+                    const { x, y } = this.#offset;
+                    const target = add({ x: -x, y: -y }, add(this.mouse, state.jitter));
+                    this.#moveTowards(target, speed * dt);
                 }
             },
         }),
@@ -279,6 +301,7 @@ class Duck {
         container.appendChild(this.#duck);
         this.mouse = MouseListener.listen();
         this.#lastTimestamp = document.timeline.currentTime;
+        this.#offset = offset(container);
         this.#changeState('idle');
         requestAnimationFrame((t) => this.#update(t));
 
@@ -359,9 +382,9 @@ class Duck {
     }
 
     #move(x, y) {
-        const { width, height, container } = this.options;
-        const halfW = width / 2;
-        const halfH = height / 2;
+        const { width, height, container, spriteScale } = this.options;
+        const halfW = (spriteScale * width) / 2;
+        const halfH = (spriteScale * height) / 2;
         this.x = clamp(x, halfW, container.clientWidth - halfW);
         this.y = clamp(y, halfH, container.clientHeight - halfH);
         this.#duck.style.left = px(Math.ceil(this.x - halfW));
@@ -372,12 +395,12 @@ class Duck {
     #isCloseToMouse() {
         const { mouseProximity, width, height, spriteScale } = this.options;
         const proximity = mouseProximity + spriteScale * Math.max(width / 2, height / 2);
-        return distSquared(this, this.mouse) <= proximity * proximity;
+        return distSquared(add(this, this.#offset), this.mouse) <= proximity * proximity;
     }
 }
 
 (function quackJs() {
-    const scriptConfig = Object.fromEntries(
+    Duck.scriptOptions = Object.fromEntries(
         Object.entries(document.currentScript.dataset).map((e) => {
             const [key, value] = e;
 
@@ -400,14 +423,14 @@ class Duck {
         })
     );
 
-    if (scriptConfig.spawn !== 'false') {
-        new Duck(scriptConfig).quack();
+    if (Duck.scriptOptions.spawn !== 'false') {
+        new Duck(Duck.scriptOptions).quack();
     }
 
-    if ('click' in scriptConfig) {
-        document.addEventListener('click', () => {
-            const duck = new Duck(scriptConfig).quack();
-            const delay = scriptConfig.click ?? 5;
+    if ('click' in Duck.scriptOptions) {
+        (Duck.scriptOptions.container || document).addEventListener('click', () => {
+            const duck = new Duck(Duck.scriptOptions).quack();
+            const delay = Duck.scriptOptions.click ?? 5;
             if (delay > 0) {
                 setTimeout(() => duck.bye(), delay * 1000);
             }
